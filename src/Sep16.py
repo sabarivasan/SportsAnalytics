@@ -1,3 +1,5 @@
+import numpy as np
+import matplotlib.pyplot as plt
 
 bowler = "Shane Warne"
 
@@ -11,6 +13,14 @@ for r in ball_by_ball:
 econ_rate = sum/len(ball_by_ball) * 6
 
 print "{}: economy rate (runs per over) = {}".format(bowler, econ_rate)
+
+h = np.histogram(ball_by_ball, bins=6)
+
+plt.hist(ball_by_ball, bins=6)
+plt.xlabel("Runs conceded")
+plt.ylabel("Number of occurrences")
+plt.title("Histogram of runs conceded by " + bowler)
+plt.show()
 
 
 
