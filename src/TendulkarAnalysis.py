@@ -33,19 +33,19 @@ def moving_avg(arr, N):
             moving_aves.append(moving_ave)
     return moving_aves
 
-last_N = 5
+last_N = 3
 
-mov_avg = moving_avg(scores, last_N)
+mov_avg = moving_avg(scores[:-1], last_N)
 print "Running mean has size {}. {}".format(len(mov_avg), mov_avg)
 
 
 x = [[a] for a in mov_avg]
 print "x = {}".format(x)
 
-y = scores[last_N - 1:]
+y = scores[last_N:]
 print "y has size {}. {}".format(len(y), y)
 assert len(mov_avg) == len(y)
-train_percent = 50
+train_percent = 80
 train_size = len(mov_avg) * train_percent / 100
 print "Size of X = {}, Size of training set = {}".format(len(mov_avg), train_size)
 
@@ -56,7 +56,7 @@ y_test = y[-train_size:]
 
 regr = linear_model.LinearRegression()
 regr.fit(x_train, y_train)
-print('Coefficients: \n', regr.coef_)
+print('Intercept:{}, Coefficients: {}\n'.format(regr.intercept_, regr.coef_))
 
 # Make predictions using the testing set
 y_pred = regr.predict(x_test)
@@ -70,8 +70,5 @@ print('Variance score: %.2f' % r2_score(y_test, y_pred))
 # Plot outputs
 plt.scatter(x_test, y_test,  color='black')
 plt.plot(x_test, y_pred, color='blue', linewidth=3)
-
-plt.xticks(())
-plt.yticks(())
 
 plt.show()
