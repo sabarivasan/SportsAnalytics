@@ -4,6 +4,11 @@ import matplotlib.pyplot as plt
 from sklearn import datasets, linear_model
 from sklearn.metrics import mean_squared_error, r2_score
 
+# How many last scores to take average of?
+last_N = 10
+# What percentage of the data is training (remaining is test)
+train_percent = 50
+
 scores = []
 with open("/Users/sabarivasan/work/SportsAnalytics/data/cricket/Tendulkar-HowStat.csv", "r") as file:
     for r in csv.reader(file):
@@ -18,24 +23,14 @@ with open("/Users/sabarivasan/work/SportsAnalytics/data/cricket/Tendulkar-HowSta
 print "Found {} scores, {}".format(len(scores), scores)
 
 def runningMean(x, N):
-    y = np.zeros((len(x),))
-    for ctr in range(len(x)):
-         y[ctr] = np.sum(x[ctr:(ctr+N)])
-    return y/N
+    y = np.zeros(len(x) - N + 1)
+    for ctr in range(len(x) - N + 1):
+        y[ctr] = np.average(x[ctr:ctr+N])
+    return y
 
-def moving_avg(arr, N):
-    cumsum, moving_aves = [0.], []
-    for i, x in enumerate(arr, 1):
-        cumsum.append(cumsum[i - 1] + x)
-        if i >= N:
-            moving_ave = (cumsum[i] - cumsum[i - N]) / N
-            # can do stuff with moving_ave here
-            moving_aves.append(moving_ave)
-    return moving_aves
 
-last_N = 3
 
-mov_avg = moving_avg(scores[:-1], last_N)
+mov_avg = runningMean(scores[:-1], last_N).tolist()
 print "Running mean has size {}. {}".format(len(mov_avg), mov_avg)
 
 
@@ -45,7 +40,7 @@ print "x = {}".format(x)
 y = scores[last_N:]
 print "y has size {}. {}".format(len(y), y)
 assert len(mov_avg) == len(y)
-train_percent = 80
+
 train_size = len(mov_avg) * train_percent / 100
 print "Size of X = {}, Size of training set = {}".format(len(mov_avg), train_size)
 
