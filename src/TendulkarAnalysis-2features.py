@@ -1,15 +1,16 @@
+"""
+This program does a linear regression of Tendulkar's scores based on 2 features:
+1) Recent batting form as represented by the last N scores
+2) Opponent team ranking as represented by the Team Rankings obtained in Sep 2017.
+"""
 import csv
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from sklearn import datasets, linear_model
-from sklearn.metrics import mean_squared_error, r2_score
-
+from AnalyticsUtil import run_model
 # How many last scores to take average of?
 last_N = 5
 # What percentage of the data is training (remaining is test)
 train_percent = 50
-
+# Team ranking to use when we don't know the team ranking
 unknown_team_ranking = 11
 
 
@@ -27,16 +28,19 @@ def get_team_ranking(team, team_rankings):
 def load_batting_data(team_rankings):
     runs = []
     rankings = []
-    with open("/Users/sabarivasan/work/SportsAnalytics/data/cricket/Tendulkar-Batting-ODIs.csv", "row") as file:
+    run_col_index = 5
+    team_col_index= 2
+
+    with open("/Users/sabarivasan/work/SportsAnalytics/data/cricket/Tendulkar-subset.csv", "row") as file:
         for row in csv.reader(file):
-            if row[6].endswith("*"):
-                r = int(row[6][:-1])
-            elif "-" == row[6]:
+            if row[run_col_index].endswith("*"):
+                r = int(row[run_col_index][:-1])
+            elif "-" == row[run_col_index]:
                 continue
             else:
-                r = int(row[6])
+                r = int(row[run_col_index])
 
-            rankings.append(get_team_ranking(row[2], team_rankings))
+            rankings.append(get_team_ranking(row[team_col_index], team_rankings))
             runs.append(r)
     print "Found {} scores".format(len(runs))
     return (runs, rankings)
@@ -49,45 +53,22 @@ def running_mean(x, N):
     return y
 
 
-team_rankings = load_team_rankings()
-(runs, rankings) = load_batting_data(team_rankings)
-mov_avg = running_mean(runs[:-1], last_N).tolist()
-print "Running mean has size {}. {}".format(len(mov_avg), mov_avg)
+def analyze_batting_data():
+    global mov_avg, x, y
+    team_rankings = load_team_rankings()
+    (runs, rankings) = load_batting_data(team_rankings)
+    mov_avg = running_mean(runs[:-1], last_N).tolist()
+    print "Running mean has size {}. {}".format(len(mov_avg), mov_avg)
+    x = [[mov_avg[n], rankings[n + last_N]] for n in range(len(mov_avg))]
+    x = np.array(x)
+    # print "x = {}".format(x)
+    y = np.array(runs[last_N:])
+    # print "y has size {}. {}".format(len(y), y)
+    assert len(x) == len(y)
 
-x = [[mov_avg[n], rankings[n + last_N]] for n in range(len(mov_avg))]
-print "x = {}".format(x)
+    run_model(x, y, train_percent, "/Users/sabarivasan/work/SportsAnalytics/data/cricket/Tendulkar-model-results.csv")
 
-y = runs[last_N:]
-print "y has size {}. {}".format(len(y), y)
-assert len(mov_avg) == len(y)
 
-train_size = len(mov_avg) * train_percent / 100
-print "Size of X = {}, Size of training set = {}".format(len(mov_avg), train_size)
+analyze_batting_data()
 
-x_train = x[:-train_size]
-y_train = y[:-train_size]
-x_test = x[-train_size:]
-y_test = y[-train_size:]
 
-regr = linear_model.LinearRegression()
-regr.fit(x_train, y_train)
-print('Intercept:{}, Coefficients: {}\n'.format(regr.intercept_, regr.coef_))
-
-# Make predictions using the testing set
-y_pred = regr.predict(x_test)
-
-# The mean squared error
-print("Mean squared error: %.2f"
-      % mean_squared_error(y_test, y_pred))
-# Explained variance score: 1 is perfect prediction
-print('Variance score: %.2f' % r2_score(y_test, y_pred))
-
-# Plot outputs
-
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-#ax = fig.gca(projection='3d')
-#ax.scatter(x_test, y_test, color='black')
-ax.plot(x_test, y_pred, color='blue', linewidth=3)
-
-plt.show()
