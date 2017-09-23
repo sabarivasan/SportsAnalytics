@@ -3,9 +3,10 @@ import sys
 import math
 from matplotlib import pyplot as plt
 import numpy as np
+from framework import TennisMatchPointByPoint
 
-MATCHES_CSV = "/Users/sabarivasan/work/SportsAnalytics/tennis_slam_pointbypoint/2017-ausopen-matches.csv"
-POINTS_CSV = "/Users/sabarivasan/work/SportsAnalytics/tennis_slam_pointbypoint/2017-ausopen-points.csv"
+MATCHES_CSV = "/Users/sabarivasan/work/SportsAnalytics/data/tennis/tennis_slam_pointbypoint/2017-ausopen-matches.csv"
+POINTS_CSV = "/Users/sabarivasan/work/SportsAnalytics/data/tennis/tennis_slam_pointbypoint/2017-ausopen-points.csv"
 
 def avg(arr):
     return sum(arr)/len(arr)
@@ -18,14 +19,11 @@ def get_match_id(player1, player2):
                 p1 = player1 if row["player1"] == player1 else player2
                 p2 = player2 if row["player2"] == player2 else player1
                 return (p1, p2, row["match_id"])
-
     return None
 
 def analyze_by_rally_length(match_id):
     max_rally_length = 0
-    rally_winners_by_length = [[0, 0] for i in range(50)]
-    # for i in range(50):
-    #     rally_winners_by_length[i] = [0, 0]
+    rally_winners_by_length = [[0, 0, 0, 0] for i in range(50)]
     with open(POINTS_CSV, "r") as matches_file:
         for row in csv.DictReader(matches_file):
             if row["match_id"] == match_id and "RallyCount" in row and int(row["RallyCount"]) > 0:
@@ -33,13 +31,24 @@ def analyze_by_rally_length(match_id):
                 if rally_count > max_rally_length:
                     max_rally_length = rally_count
                 rally_winners_by_length[rally_count - 1][int(row["PointWinner"]) - 1] += 1
+
     del rally_winners_by_length[max_rally_length:]
+    for rally_length in range(len(rally_winners_by_length)):
+        rally_winners_by_length[rally_length - 1][2] = TennisMatchPointByPoint.load_rally_length(player1, player2,
+                                                                   player1, rally_length,
+                                                                   rally_winners_by_length[rally_length - 1][0])
+        rally_winners_by_length[rally_length - 1][3] = TennisMatchPointByPoint.load_rally_length(player1, player2,
+                                                                   player2, rally_length,
+                                                                   rally_winners_by_length[rally_length - 1][1])
+    pltx = np.array(rally_winners_by_length)
+
     rally_lengths = [i + 1 for i in range(max_rally_length)]
     plt.plot(rally_lengths, rally_winners_by_length)
-    plt.xlabel([player1, player2])
+    plt.legend([player1, player2, "Other matches " + player1, "Other matches " + player2])
+    plt.xlabel("Rally length")
+    plt.ylabel("Point win count")
+    plt.title("Analysis by rally length")
     plt.show()
-
-
 
 def enumerate(match_id, analysis_cls):
     max_rally_length = 0
@@ -156,10 +165,10 @@ class AnalyzeServeByGameScore:
 class AnalyzeByBreakPoint:
 
     def __init__(self, player1, player2):
-        self.p1_brk_pts_lost = [0] * 5
-        self.p1_brk_pts_saved = [0] * 5
-        self.p2_brk_pts_lost = [0] * 5
-        self.p2_brk_pts_saved = [0] * 5
+        self.p1_brk_pts_lost = [0] * 6
+        self.p1_brk_pts_saved = [0] * 6
+        self.p2_brk_pts_lost = [0] * 6
+        self.p2_brk_pts_saved = [0] * 6
         self.player1 = player1
         self.player2 = player2
         self.curr_set = None
@@ -186,8 +195,14 @@ class AnalyzeByBreakPoint:
         return ("40" == p2_score and p1_score in ["0", "15", "30"]) or ("AD" == p2_score and p1_score == "40")
 
     def done(self):
+        past_match_data = TennisMatchPointByPoint.load_break_point_data(player1, player2)
+        self.p1_brk_pts_lost[5] = past_match_data[0]
+        self.p1_brk_pts_saved[5] = past_match_data[1]
+        self.p2_brk_pts_lost[5] = past_match_data[2]
+        self.p2_brk_pts_saved[5] = past_match_data[3]
+
         # data to plot
-        n_groups = 5
+        n_groups = 6
 
         # create plot
         plt.subplots()
@@ -215,10 +230,13 @@ class AnalyzeByBreakPoint:
                 bottom=self.p2_brk_pts_lost,
                 label=self.player2 + " - break points saved")
 
-        plt.xlabel('Set')
+
+
         plt.ylabel('Break points')
         plt.title('Break point analysis')
-        plt.xticks(index + bar_width, [("Set " + str(n + 1)) for n in range(5)])
+        x_labels = [("Set " + str(n + 1)) for n in range(6)]
+        x_labels[5] = "Other matches"
+        plt.xticks(index + bar_width, x_labels)
         plt.legend()
 
         plt.tight_layout()
@@ -249,9 +267,9 @@ if __name__ == "__main__":
 
 
     # 6-4, 3-6, 6-1, 3-6, 6-3.
-    #analyze_by_rally_length(m_id)
+    # analyze_by_rally_length(m_id)
 
-    # enumerate(m_id, AnalyzeByBreakPoint(player1, player2))
+    #enumerate(m_id, AnalyzeByBreakPoint(player1, player2))
 
     enumerate(m_id, AnalyzeServeByGameScore(player1, player2))
 

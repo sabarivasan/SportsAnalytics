@@ -99,8 +99,8 @@ if __name__ == "__main__":
 
     # simple_bar()
     # horiz_bar()
-    # multiple_bars()
-    stacked_bars()
+    multiple_bars()
+    # stacked_bars()
 
 
 
